@@ -44,6 +44,7 @@ import {
   DeleteFileService,
   DeleteUploadSessionService,
   DirectLink,
+  EnableFileThumbnailService,
   FileResponse,
   FileThumbResponse,
   FileUpdateService,
@@ -1976,6 +1977,23 @@ export function sendImport(req: ImportWorkflowService): ThunkResponse<TaskRespon
     return await dispatch(
       send(
         "/workflow/import",
+        {
+          data: req,
+          method: "POST",
+        },
+        {
+          ...defaultOpts,
+        },
+      ),
+    );
+  };
+}
+
+export function enableFileThumbnail(req: EnableFileThumbnailService): ThunkResponse<void> {
+  return async (dispatch, _getState) => {
+    return await dispatch(
+      send(
+        "/file/action/enable-thumbnail",
         {
           data: req,
           method: "POST",

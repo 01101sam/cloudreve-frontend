@@ -12,6 +12,7 @@ import CrUri, { Filesystem } from "../../../util/uri.ts";
 import { FileManagerIndex } from "../FileManager.tsx";
 
 const supportedArchiveTypes = ["zip", "gz", "xz", "tar", "rar"];
+const supportedImageTypes = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tiff", "tif"];
 
 export const canManageVersion = (file: FileResponse, bs: Boolset) => {
   return (
@@ -74,6 +75,7 @@ export interface DisplayOption {
   showVersionControl?: boolean;
   showManageShares?: boolean;
   showCreateArchive?: boolean;
+  showEnableThumbnail?: boolean;
 
   andCapability?: Boolset;
   orCapability?: Boolset;
@@ -278,7 +280,18 @@ export const getActionOpt = (
     display.orCapability &&
     display.orCapability.enabled(NavigatorCapability.download_file);
 
-  display.showMore = display.showVersionControl || display.showManageShares || display.showCreateArchive;
+  display.showEnableThumbnail =
+    targets.length === 1 &&
+    display.hasFile &&
+    display.allUpdatable &&
+    display.orCapability &&
+    display.orCapability.enabled(NavigatorCapability.update_metadata) &&
+    display.orCapability.enabled(NavigatorCapability.generate_thumb) &&
+    supportedImageTypes.includes(firstFileSuffix?.toLowerCase() ?? "") &&
+    targets[0].metadata &&
+    targets[0].metadata[Metadata.thumbDisabled] !== undefined;
+
+  display.showMore = display.showVersionControl || display.showManageShares || display.showCreateArchive || display.showEnableThumbnail;
   return display;
 };
 

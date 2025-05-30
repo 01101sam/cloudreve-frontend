@@ -13,8 +13,13 @@ import HistoryOutlined from "../../Icons/HistoryOutlined.tsx";
 import LinkSetting from "../../Icons/LinkSetting.tsx";
 import { SubMenuItemsProps } from "./OrganizeMenuItems.tsx";
 import Archive from "../../Icons/Archive.tsx";
+import { enableThumbnail } from '../../../redux/thunks/file.ts';
 
-const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
+interface MoreMenuItemsProps extends SubMenuItemsProps {
+  fmIndex: number;
+}
+
+const MoreMenuItems = ({ displayOpt, targets, fmIndex }: MoreMenuItemsProps) => {
   const { rootPopupState } = useContext(CascadingContext);
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -84,6 +89,16 @@ const MoreMenuItems = ({ displayOpt, targets }: SubMenuItemsProps) => {
             <Archive fontSize="small" />
           </ListItemIcon>
           <ListItemText>{t("application:fileManager.createArchive")}</ListItemText>
+        </CascadingMenuItem>
+      )}
+      {displayOpt.showEnableThumbnail && (
+        <CascadingMenuItem
+          onClick={onClick(() => dispatch(enableThumbnail(fmIndex, targets[0])))}
+        >
+          <ListItemIcon>
+            <Archive fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("application:fileManager.enableThumbnail")}</ListItemText>
         </CascadingMenuItem>
       )}
     </>

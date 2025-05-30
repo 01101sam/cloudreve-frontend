@@ -14,6 +14,7 @@ import {
   sendRestoreFile,
   sendUnlockFiles,
   setCurrentVersion,
+  enableFileThumbnail,
 } from "../../api/api.ts";
 import {
   ConflictDetail,
@@ -83,8 +84,8 @@ const contextMenuCloseAnimationDelay = 250;
 
 function get_platform(): string {
   // 2022 way of detecting. Note : this userAgentData feature is available only in secure contexts (HTTPS)
-  if (typeof navigator.userAgentData !== "undefined" && navigator.userAgentData != null) {
-    return navigator.userAgentData.platform;
+  if (typeof (navigator as any).userAgentData !== "undefined" && (navigator as any).userAgentData != null) {
+    return (navigator as any).userAgentData.platform;
   }
   // Deprecated but still works for most of the browser
   if (typeof navigator.platform !== "undefined") {
@@ -1219,3 +1220,14 @@ function startBatchGetDirectLinks(files: FileResponse[]): AppThunk<Promise<Direc
     );
   };
 }
+
+export const enableThumbnail = (fmIndex: number, file: FileResponse): AppThunk<Promise<void>> => async (dispatch, _getState) => {
+  try {
+    await dispatch(enableFileThumbnail({ uri: file.path }));
+    enqueueSnackbar(i18next.t("fileManager.thumbnailEnabled", { ns: "application" }), { variant: "success" });
+    // Load the thumbnail instead of refreshing the entire file list
+    dispatch(loadFileThumb(fmIndex, file));
+  } catch (error) {
+    enqueueSnackbar(i18next.t("fileManager.thumbnailEnableFailed", { ns: "application" }), { variant: "error" });
+  }
+};

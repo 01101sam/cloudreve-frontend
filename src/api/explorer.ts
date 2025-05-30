@@ -477,3 +477,7 @@ export interface DirectLink {
   file_url: string;
   link: string;
 }
+
+export interface EnableFileThumbnailService {
+  uri: string;
+}
