@@ -1225,8 +1225,6 @@ export const enableThumbnail = (fmIndex: number, file: FileResponse): AppThunk<P
   try {
     await dispatch(enableFileThumbnail({ uri: file.path }));
     enqueueSnackbar(i18next.t("fileManager.thumbnailEnabled", { ns: "application" }), { variant: "success" });
-    // Load the thumbnail instead of refreshing the entire file list
-    dispatch(loadFileThumb(fmIndex, file));
   } catch (error) {
     enqueueSnackbar(i18next.t("fileManager.thumbnailEnableFailed", { ns: "application" }), { variant: "error" });
   }
