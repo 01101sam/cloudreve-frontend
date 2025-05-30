@@ -268,7 +268,7 @@
     "enableThumbnail": "重新生成缩略图",
     "thumbnailEnabled": "缩略图已重新生成",
     "thumbnailEnableFailed": "缩略图重新生成失败",
-    "newFolder",: "创建文件夹",
+    "newFolder": "创建文件夹",
     "newFile": "创建文件",
     "showFullPath": "显示路径",
     "listView": "列表",

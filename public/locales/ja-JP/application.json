@@ -268,7 +268,7 @@
     "enableThumbnail": "サムネイルを再生成する",
     "thumbnailEnabled": "サムネイルの再生成に成功しました",
     "thumbnailEnableFailed": "サムネイルの再生成に失敗しました",
-    "newFolder",: "フォルダを作成",
+    "newFolder": "フォルダを作成",
     "newFile": "ファイルを作成",
     "showFullPath": "パス表示",
     "listView": "リスト",
