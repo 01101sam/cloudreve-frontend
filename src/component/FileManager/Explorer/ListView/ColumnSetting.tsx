@@ -25,12 +25,15 @@ import SessionManager, { UserSettings } from "../../../../session";
 import AddColumn from "./AddColumn.tsx";
 import { useSnackbar } from "notistack";
 import { DefaultCloseAction } from "../../../Common/Snackbar/snackbar.tsx";
+import { getUserSettings } from "../../../../api/api.ts";
+import { updateViewPreference } from "../../../../api/viewpreference.ts";
 
 const ColumnSetting = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const { enqueueSnackbar } = useSnackbar();
   const [columns, setColumns] = useState<ListViewColumnSetting[]>([]);
+  const [syncViewPreferences, setSyncViewPreferences] = useState(false);
 
   const open = useAppSelector(
     (state) => state.globalState.listViewColumnSettingDialogOpen,
@@ -38,6 +41,38 @@ const ColumnSetting = () => {
   const listViewColumns = useAppSelector(
     (state) => state.fileManager[FileManagerIndex.main].listViewColumns,
   );
+  
+  // Get current file manager state for cloud sync
+  const path = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].path,
+  );
+  const layout = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].layout,
+  );
+  const showThumb = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].showThumb,
+  );
+  const sortBy = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].sortBy,
+  );
+  const sortDirection = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].sortDirection,
+  );
+  const pageSize = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].pageSize,
+  );
+  const galleryWidth = useAppSelector(
+    (state) => state.fileManager[FileManagerIndex.main].galleryWidth,
+  );
+
+  // Fetch user settings to check if sync is enabled
+  useEffect(() => {
+    dispatch(getUserSettings()).then((settings) => {
+      if (settings) {
+        setSyncViewPreferences(settings.sync_view_preferences || false);
+      }
+    });
+  }, [dispatch]);
 
   useEffect(() => {
     if (open) {
@@ -53,9 +88,22 @@ const ColumnSetting = () => {
     if (columns.length > 0) {
       dispatch(setListViewColumns(columns));
       SessionManager.set(UserSettings.ListViewColumns, columns);
+      
+      // Save to cloud if sync is enabled
+      if (syncViewPreferences) {
+        dispatch(updateViewPreference(path || "/", {
+          layout: layout || "grid",
+          show_thumb: showThumb,
+          sort_by: sortBy || "created_at",
+          sort_direction: sortDirection || "asc",
+          page_size: pageSize,
+          gallery_width: galleryWidth,
+          list_columns: JSON.stringify(columns),
+        }));
+      }
     }
     dispatch(setListViewColumnSettingDialog(false));
-  }, [dispatch, columns]);
+  }, [dispatch, columns, syncViewPreferences, path, layout, showThumb, sortBy, sortDirection, pageSize, galleryWidth]);
 
   const onColumnAdded = useCallback(
     (column: ListViewColumnSetting) => {

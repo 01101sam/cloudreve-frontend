@@ -99,6 +99,7 @@ export interface UserSettings {
   passwordless: boolean;
   two_fa_enabled: boolean;
   passkeys?: Passkey[];
+  sync_view_preferences: boolean;
 }
 
 export interface PatchUserSetting {
@@ -112,6 +113,7 @@ export interface PatchUserSetting {
   new_password?: string;
   two_fa_enabled?: boolean;
   two_fa_code?: string;
+  sync_view_preferences?: boolean;
 }
 
 export interface PasskeyCredentialOption {

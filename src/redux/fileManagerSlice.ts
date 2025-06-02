@@ -45,6 +45,7 @@ export interface SingleManager {
     [key: string]: boolean;
   };
   galleryWidth: number;
+  syncViewPreferences?: boolean;
 
   // Context Menu
   contextMenuOpen?: boolean;

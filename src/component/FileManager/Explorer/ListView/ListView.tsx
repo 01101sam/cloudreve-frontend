@@ -19,6 +19,8 @@ import { FmIndexContext } from "../../FmIndexContext.tsx";
 import { setListViewColumns } from "../../../../redux/fileManagerSlice.ts";
 import SessionManager, { UserSettings } from "../../../../session";
 import { SearchLimitReached } from "../EmptyFileList.tsx";
+import { getUserSettings } from "../../../../api/api.ts";
+import { updateViewPreference } from "../../../../api/viewpreference.ts";
 
 const ListView = React.forwardRef(
   (
@@ -40,6 +42,27 @@ const ListView = React.forwardRef(
     const columnSetting = useAppSelector(
       (state) => state.fileManager[fmIndex].listViewColumns,
     );
+    const path = useAppSelector(
+      (state) => state.fileManager[fmIndex].path,
+    );
+    const layout = useAppSelector((state) => state.fileManager[fmIndex].layout);
+    const showThumb = useAppSelector(
+      (state) => state.fileManager[fmIndex].showThumb,
+    );
+    const sortBy = useAppSelector(
+      (state) => state.fileManager[fmIndex].sortBy,
+    );
+    const sortDirection = useAppSelector(
+      (state) => state.fileManager[fmIndex].sortDirection,
+    );
+    const pageSize = useAppSelector(
+      (state) => state.fileManager[fmIndex].pageSize,
+    );
+    const galleryWidth = useAppSelector(
+      (state) => state.fileManager[fmIndex].galleryWidth,
+    );
+    
+    const [syncViewPreferences, setSyncViewPreferences] = useState(false);
 
     const [columns, setColumns] = useState<ListViewColumn[]>(
       columnSetting.map(
@@ -50,6 +73,15 @@ const ListView = React.forwardRef(
         }),
       ),
     );
+    
+    // Fetch user settings to check if sync is enabled
+    useEffect(() => {
+      dispatch(getUserSettings()).then((settings) => {
+        if (settings) {
+          setSyncViewPreferences(settings.sync_view_preferences || false);
+        }
+      });
+    }, [dispatch]);
 
     useEffect(() => {
       setColumns(
@@ -84,8 +116,21 @@ const ListView = React.forwardRef(
       if (settings.length > 0) {
         dispatch(setListViewColumns(settings));
         SessionManager.set(UserSettings.ListViewColumns, settings);
+        
+        // Save to cloud if sync is enabled
+        if (syncViewPreferences) {
+          dispatch(updateViewPreference(path || "/", {
+            layout: layout || "grid",
+            show_thumb: showThumb,
+            sort_by: sortBy || "created_at",
+            sort_direction: sortDirection || "asc",
+            page_size: pageSize,
+            gallery_width: galleryWidth,
+            list_columns: JSON.stringify(settings),
+          }));
+        }
       }
-    }, [dispatch, setColumns]);
+    }, [dispatch, setColumns, syncViewPreferences, path, layout, showThumb, sortBy, sortDirection, pageSize, galleryWidth]);
 
     return (
       <Box
