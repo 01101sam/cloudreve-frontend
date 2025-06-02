@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { getFileInfo, getFileList, getUserCapacity } from "../../api/api.ts";
+import { getFileInfo, getFileList, getUserCapacity, getUserSettings } from "../../api/api.ts";
 import { FileResponse, ListResponse, Metadata } from "../../api/explorer.ts";
 import { getActionOpt } from "../../component/FileManager/ContextMenu/useActionDisplayOpt.ts";
 import { FileManagerIndex } from "../../component/FileManager/FileManager.tsx";
@@ -31,6 +31,10 @@ import {
   setSelected,
   setSortOption,
   SingleManager,
+  setLayout,
+  setShowThumb,
+  setListViewColumns,
+  setGalleryWidth,
 } from "../fileManagerSlice.ts";
 import {
   closeAdvanceSearch,
@@ -45,6 +49,10 @@ import {
 import { Viewers } from "../siteConfigSlice.ts";
 import { AppThunk } from "../store.ts";
 import { deleteFile, openFileContextMenu } from "./file.ts";
+import { ThumbCache } from "../fileManagerSlice.ts";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getViewPreference } from "../../api/viewpreference";
+import { ListViewColumnSetting } from "../../component/FileManager/Explorer/ListView/Column.tsx";
 
 export function setTargetPath(index: number, path: string): AppThunk {
   return async (dispatch, _getState) => {
@@ -271,9 +279,17 @@ export function fileHovered(index: number, file: FileResponse, hovered: boolean)
 }
 
 export function refreshFileList(index: number): AppThunk {
-  return async (dispatch, _getState) => {
+  return async (dispatch, getState) => {
     dispatch(closeContextMenu({ index, value: undefined }));
-    await dispatch(navigateReconcile(index));
+    
+    // Check if we have a pure path to fetch preferences for
+    const purePath = getState().fileManager[index].pure_path;
+    if (purePath) {
+      await dispatch(fetchPreferencesAndNavigate(index, purePath));
+    } else {
+      await dispatch(navigateReconcile(index));
+    }
+    
     dispatch(clearSelected({ index, value: undefined }));
   };
 }
@@ -560,5 +576,61 @@ export function openContextUrlFromUri(index: number, uri: string, e: React.Mouse
     }
 
     dispatch(openFileContextMenu(index, file, true, e, ContextMenuTypes.file, false));
+  };
+}
+
+export function fetchViewPreferences(fmIndex: number, path: string): AppThunk<Promise<void>> {
+  return async (dispatch, getState) => {
+    try {
+      // Check if sync is enabled from Redux state or user login session
+      const userSettings = await dispatch(getUserSettings());
+      if (!userSettings || !userSettings.sync_view_preferences) {
+        return;
+      }
+      
+      // Fetch preferences for the folder
+      const preferences = await dispatch(getViewPreference(path));
+      if (preferences) {
+        // Apply preferences to the file manager
+        if (preferences.layout) {
+          dispatch(setLayout({ index: fmIndex, value: preferences.layout }));
+        }
+        if (preferences.show_thumb !== undefined) {
+          dispatch(setShowThumb({ index: fmIndex, value: preferences.show_thumb }));
+        }
+        if (preferences.sort_by && preferences.sort_direction) {
+          dispatch(setSortOption({ 
+            index: fmIndex, 
+            value: [preferences.sort_by, preferences.sort_direction] 
+          }));
+        }
+        if (preferences.page_size) {
+          dispatch(setPageSize({ index: fmIndex, value: preferences.page_size }));
+        }
+        if (preferences.gallery_width) {
+          dispatch(setGalleryWidth({ index: fmIndex, value: preferences.gallery_width }));
+        }
+        if (preferences.list_columns) {
+          // Parse list_columns if it's a string
+          const columns = typeof preferences.list_columns === 'string' 
+            ? JSON.parse(preferences.list_columns) 
+            : preferences.list_columns;
+          dispatch(setListViewColumns(columns));
+        }
+      }
+    } catch (error) {
+      // Silently fail - we'll use local preferences as fallback
+      console.error("Failed to fetch view preferences:", error);
+    }
+  };
+}
+
+// Fetch view preferences and then navigate
+export function fetchPreferencesAndNavigate(fmIndex: number, path: string): AppThunk {
+  return async (dispatch) => {
+    // Fetch and apply view preferences first
+    await dispatch(fetchViewPreferences(fmIndex, path));
+    // Then navigate to load the file list with correct settings
+    dispatch(navigateReconcile(fmIndex));
   };
 }

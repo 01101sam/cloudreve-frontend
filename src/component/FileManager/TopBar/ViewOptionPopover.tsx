@@ -33,6 +33,9 @@ import ImageCopyOutlined from "../../Icons/ImageCopyOutlined.tsx";
 import { FmIndexContext } from "../FmIndexContext.tsx";
 import Setting from "../../Icons/Setting.tsx";
 import { setListViewColumnSettingDialog } from "../../../redux/globalStateSlice.ts";
+import { updateViewPreference } from "../../../api/viewpreference.ts";
+import { debounce } from "lodash";
+import { getUserSettings } from "../../../api/api.ts";
 
 const layoutOptions: {
   label: string;
@@ -92,11 +95,45 @@ const ViewOptionPopover = ({ ...rest }: PopoverProps) => {
   const galleryWidth = useAppSelector(
     (state) => state.fileManager[fmIndex].galleryWidth,
   );
+  const sortBy = useAppSelector(
+    (state) => state.fileManager[fmIndex].sortBy,
+  );
+  const sortDirection = useAppSelector(
+    (state) => state.fileManager[fmIndex].sortDirection,
+  );
+  const path = useAppSelector(
+    (state) => state.fileManager[fmIndex].path,
+  );
+  const listViewColumns = useAppSelector(
+    (state) => state.fileManager[fmIndex].listViewColumns,
+  );
+  
+  const [syncViewPreferences, setSyncViewPreferences] = React.useState(false);
+  
   const [desiredPageSize, setDesiredPageSize] = React.useState(pageSize);
   const pageSizeMaxSafe = pageSizeMax ?? desiredPageSize;
   const step = pageSizeMaxSafe - MinPageSize <= 100 ? 1 : 10;
   const [desiredImageWidth, setDesiredImageWidth] =
     React.useState(galleryWidth);
+
+  // Fetch user settings to check if sync is enabled
+  React.useEffect(() => {
+    dispatch(getUserSettings()).then((settings) => {
+      if (settings) {
+        setSyncViewPreferences(settings.sync_view_preferences || false);
+      }
+    });
+  }, [dispatch]);
+
+  // Debounced function to save view preferences to cloud
+  const saveViewPreferencesToCloud = React.useCallback(
+    debounce((currentPath: string, preferences: any) => {
+      if (syncViewPreferences) {
+        dispatch(updateViewPreference(currentPath || "/", preferences));
+      }
+    }, 500),
+    [syncViewPreferences, dispatch]
+  );
 
   const handleLayoutChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -105,6 +142,17 @@ const ViewOptionPopover = ({ ...rest }: PopoverProps) => {
     if (newMode) {
       dispatch(setLayout({ index: fmIndex, value: newMode }));
       SessionManager.set(UserSettings.Layout, newMode);
+      
+      // Save to cloud if sync is enabled
+      saveViewPreferencesToCloud(path || "/", {
+        layout: newMode,
+        show_thumb: showThumb,
+        sort_by: sortBy || "created_at",
+        sort_direction: sortDirection || "asc",
+        page_size: pageSize,
+        gallery_width: galleryWidth,
+        list_columns: JSON.stringify(listViewColumns),
+      });
     }
   };
 
@@ -114,6 +162,17 @@ const ViewOptionPopover = ({ ...rest }: PopoverProps) => {
   ) => {
     dispatch(setShowThumb({ index: fmIndex, value: newMode }));
     SessionManager.set(UserSettings.ShowThumb, newMode);
+    
+    // Save to cloud if sync is enabled
+    saveViewPreferencesToCloud(path || "/", {
+      layout: layout || "grid",
+      show_thumb: newMode,
+      sort_by: sortBy || "created_at",
+      sort_direction: sortDirection || "asc",
+      page_size: pageSize,
+      gallery_width: galleryWidth,
+      list_columns: JSON.stringify(listViewColumns),
+    });
   };
 
   const handlePageSlideChange = (
@@ -127,9 +186,20 @@ const ViewOptionPopover = ({ ...rest }: PopoverProps) => {
     _event: React.SyntheticEvent | Event,
     newValue: number | number[],
   ) => {
-    const pageSize = Math.max(MinPageSize, newValue as number);
-    SessionManager.set(UserSettings.PageSize, pageSize);
-    dispatch(changePageSize(fmIndex, pageSize));
+    const newPageSize = Math.max(MinPageSize, newValue as number);
+    SessionManager.set(UserSettings.PageSize, newPageSize);
+    dispatch(changePageSize(fmIndex, newPageSize));
+    
+    // Save to cloud if sync is enabled
+    saveViewPreferencesToCloud(path || "/", {
+      layout: layout || "grid",
+      show_thumb: showThumb,
+      sort_by: sortBy || "created_at",
+      sort_direction: sortDirection || "asc",
+      page_size: newPageSize,
+      gallery_width: galleryWidth,
+      list_columns: JSON.stringify(listViewColumns),
+    });
   };
 
   const handleImageSizeChange = (
@@ -143,8 +213,20 @@ const ViewOptionPopover = ({ ...rest }: PopoverProps) => {
     _event: React.SyntheticEvent | Event,
     newValue: number | number[],
   ) => {
-    SessionManager.set(UserSettings.GalleryWidth, newValue as number);
-    dispatch(setGalleryWidth({ index: fmIndex, value: newValue as number }));
+    const newGalleryWidth = newValue as number;
+    SessionManager.set(UserSettings.GalleryWidth, newGalleryWidth);
+    dispatch(setGalleryWidth({ index: fmIndex, value: newGalleryWidth }));
+    
+    // Save to cloud if sync is enabled
+    saveViewPreferencesToCloud(path || "/", {
+      layout: layout || "grid",
+      show_thumb: showThumb,
+      sort_by: sortBy || "created_at",
+      sort_direction: sortDirection || "asc",
+      page_size: pageSize,
+      gallery_width: newGalleryWidth,
+      list_columns: JSON.stringify(listViewColumns),
+    });
   };
 
   return (

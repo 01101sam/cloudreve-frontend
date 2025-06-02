@@ -11,6 +11,9 @@ import React, { useContext, useMemo } from "react";
 import Checkmark from "../../Icons/Checkmark.tsx";
 import { changeSortOption } from "../../../redux/thunks/filemanager.ts";
 import SessionManager, { UserSettings } from "../../../session";
+import { getUserSettings } from "../../../api/api.ts";
+import { updateViewPreference } from "../../../api/viewpreference.ts";
+import { debounce } from "lodash";
 
 import { FmIndexContext } from "../FmIndexContext.tsx";
 
@@ -90,6 +93,43 @@ const SortMethodMenu = ({ onClose, ...rest }: MenuProps) => {
   const sortDirection = useAppSelector(
     (state) => state.fileManager[fmIndex].sortDirection,
   );
+  const path = useAppSelector(
+    (state) => state.fileManager[fmIndex].path,
+  );
+  const layout = useAppSelector((state) => state.fileManager[fmIndex].layout);
+  const showThumb = useAppSelector(
+    (state) => state.fileManager[fmIndex].showThumb,
+  );
+  const pageSize = useAppSelector(
+    (state) => state.fileManager[fmIndex].pageSize,
+  );
+  const galleryWidth = useAppSelector(
+    (state) => state.fileManager[fmIndex].galleryWidth,
+  );
+  const listViewColumns = useAppSelector(
+    (state) => state.fileManager[fmIndex].listViewColumns,
+  );
+  
+  const [syncViewPreferences, setSyncViewPreferences] = React.useState(false);
+  
+  // Fetch user settings to check if sync is enabled
+  React.useEffect(() => {
+    dispatch(getUserSettings()).then((settings) => {
+      if (settings) {
+        setSyncViewPreferences(settings.sync_view_preferences || false);
+      }
+    });
+  }, [dispatch]);
+
+  // Debounced function to save view preferences to cloud
+  const saveViewPreferencesToCloud = React.useCallback(
+    debounce((currentPath: string, preferences: any) => {
+      if (syncViewPreferences) {
+        dispatch(updateViewPreference(currentPath || "/", preferences));
+      }
+    }, 500),
+    [syncViewPreferences, dispatch]
+  );
 
   const options = useMemo(() => {
     if (!orderMethodOptions || !orderDirectionOption) return [];
@@ -115,6 +155,18 @@ const SortMethodMenu = ({ onClose, ...rest }: MenuProps) => {
     );
     SessionManager.set(UserSettings.SortBy, option.order_by);
     SessionManager.set(UserSettings.SortDirection, option.order_direction);
+    
+    // Save to cloud if sync is enabled
+    saveViewPreferencesToCloud(path || "/", {
+      layout: layout || "grid",
+      show_thumb: showThumb,
+      sort_by: option.order_by,
+      sort_direction: option.order_direction,
+      page_size: pageSize,
+      gallery_width: galleryWidth,
+      list_columns: JSON.stringify(listViewColumns),
+    });
+    
     onClose && onClose({}, "escapeKeyDown");
   };
 

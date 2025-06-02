@@ -194,6 +194,29 @@ const PreferenceSetting = ({ setting, setSetting }: PreferenceSettingProps) => {
           ))}
         </SelectorBox>
       </SettingForm>
+      <SettingForm title={t("setting.syncViewPreferences")} lgWidth={12}>
+        <FormControl fullWidth>
+          <SmallFormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={setting.sync_view_preferences || false}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  setSetting({ ...setting, sync_view_preferences: newValue });
+                  dispatch(
+                    sendUpdateUserSetting({
+                      sync_view_preferences: newValue,
+                    }),
+                  );
+                }}
+              />
+            }
+            label={t("setting.syncViewPreferencesLabel")}
+          />
+          <FormHelperText>{t("setting.syncViewPreferencesDescription")}</FormHelperText>
+        </FormControl>
+      </SettingForm>
       <SettingForm title={t("setting.versionRetention")}>
         <OutlinedSettingBox sx={{ py: 0.5 }}>
           <Box
